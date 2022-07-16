@@ -1,4 +1,6 @@
+#[derive(Debug)]
 #[allow(dead_code)]
+#[derive(PartialEq)]
 pub enum TokenType {
     H6,
     H5,
@@ -17,8 +19,15 @@ pub enum TokenType {
     UNDERSCORE,
     DOUBLEASTERISK,
     ASTERISK,
-    /* PARAGRAPH,
-    TEXT, */
+    /* PARAGRAPH, */
+    TEXT,
+    EOF,
+}
+
+#[derive(Debug)]
+pub struct Token {
+    pub t_type: TokenType,
+    pub value: String,
 }
 
 /* 
