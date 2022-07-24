@@ -20,7 +20,42 @@ saved inside the `Lexer`.
 
 > Under Development
 
-The current code is able to 
+The current code is able to provide lexemes for headings
+but is Spaghetti code done for prototyping. Below are
+algorithms for handling the lexing.
+
+### prev new line
+
+This algorithm is used by those special characters which 
+provide semantics when they are at starting line.
+eg: Headings, Lists (ul and li), blockquotes.
+
+### check and drop or choose
+Once we encounter special symbols like `(, *, **,   `
+
+### check until change
+
+This algorithm is used for finding the text in the markdown
+by finding the end of the end of the text until a symbol is
+found.
+
+For headings, we use the **prev new line** algorithm and then 
+use **check until change**
+
+**Possible cases**
+
+```md
+hello there `bold`\n -> TEXT(hello there ) CODE(`) TEXT(BOLD) CODE(`) EOL(\n)
+hello there `bold` some\n -> TEXT(hello there ) CODE(`) TEXT(bold) CODE(`) TEXT( some) EOL(\n)
+hello # there\n -> TEXT(hello # there) EOL (\n)
+## hello there -> H2(##) TEXT(hello there)
+```
+
+1. once found text (h in this case), we start looping until
+we find a set of special characters.
+
+special characters are -> `\n, *, ! (`
+
 
 ## Bugs, Fixes and Todos
 

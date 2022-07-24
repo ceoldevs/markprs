@@ -21,6 +21,9 @@ pub enum TokenType {
     ASTERISK,
     /* PARAGRAPH, */
     TEXT,
+    UL,
+    OL,
+    EOL,
     EOF,
 }
 
