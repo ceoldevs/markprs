@@ -53,9 +53,6 @@ impl Lexer {
         }
     }
 
-    // #[allow(dead_code)] // TODO: remove the dead code labels 
-    // pub fn output_token() { }
-
     fn is_text(ch: &char) -> bool {
         lazy_static! {
             static ref RE:Regex = Regex::new(r"[0-9a-zA-Z]").unwrap();
@@ -69,8 +66,109 @@ impl Lexer {
         self.meta_data.prev_token == None || self.meta_data.prev_token == Some(lexer::TokenType::EOL)
     }
 
-    // TODO: Working fine but not sure how to detect 
-    // the end of symbols
+    fn new_ln(&mut self) -> lexer::Token {
+        self.read_pos += 1;
+        let value = self.input[self.pos..self.read_pos].iter().collect::<String>();
+        self.pos = self.read_pos;
+        // println!("{}, {}", len, self.read_pos);
+        self.meta_data.prev_token = Some(lexer::TokenType::EOL);
+        return lexer::Token{
+            t_type: lexer::TokenType::EOL,
+            value
+        };
+    }
+
+    // Headings parse
+    /*
+    * Need to check if the prev_token is TokenType::EOL or `None`
+    * depending upon the count of hash, return the token type for headings
+    */
+    fn find_head(&mut self) -> lexer::Token {
+        let mut count = 1;
+        let mut ch: char;
+        // let mut true_head = false;
+        loop {
+            self.read_pos += 1;
+            ch = self.input[self.read_pos];
+            if ch == '#' {
+                count += 1;
+            } else {
+                break;
+            }
+        }
+
+        let t_type: lexer::TokenType;
+        let value: String;
+
+        // If we have space or new line just after hashes, 
+        // then only it is considered as heading. When 
+        // parsing, if we encounter EOL, we take the text 
+        // as empty strings.""
+        if ch != ' ' && ch != '\n' {
+            self.read_pos = self.pos;
+            if self.is_head() {
+                self.meta_data.prev_token = Some(lexer::TokenType::TEXT);
+            }
+            return self.find_text();
+        }
+        
+        match count {
+            1 => t_type = lexer::TokenType::H1,
+            2 => t_type = lexer::TokenType::H2,
+            3 => t_type = lexer::TokenType::H3,
+            4 => t_type = lexer::TokenType::H4,
+            5 => t_type = lexer::TokenType::H5,
+            6 => t_type = lexer::TokenType::H6,
+            _ => {
+                // if # count more than 6, change the prev token to Text
+                // and rerun the logic by which the control flow enters 
+                // the Text handling phase
+                self.read_pos = self.pos;
+                if self.is_head() {
+                    self.meta_data.prev_token = Some(lexer::TokenType::TEXT);
+                }
+                // println!("{:?}", self.meta_data.prev_token);
+                return self.find_text();
+            }
+        }
+
+        // TODO: handle edge cases of out of index
+        // println!("{}", self.read_pos);
+        self.read_pos += 1;
+        value = self.input[self.pos..self.read_pos].iter().collect::<String>();
+        self.pos = self.read_pos;
+
+        self.meta_data.prev_token = Some(lexer::TokenType::H1);
+        return lexer::Token{
+            t_type,
+            value,
+        };
+    }
+
+    fn find_text(&mut self) -> lexer::Token {
+        // TODO: handle edge cases of out of index
+        self.meta_data.prev_token = Some(lexer::TokenType::TEXT);
+        self.read_pos += 1;
+        let mut ch = self.input[self.read_pos];
+        loop {
+            if Lexer::is_text(&ch) || ch == ' ' || (ch == '#' && !Lexer::is_head(&self)){
+                self.read_pos += 1;
+                ch = self.input[self.read_pos];
+            } else {
+                // TODO: handle edge cases of out of index
+                let value = self.input[self.pos..self.read_pos] 
+                               .iter() 
+                               .collect::<String>();
+                self.pos = self.read_pos;
+                self.meta_data.prev_token = Some(lexer::TokenType::TEXT);
+                return lexer::Token{
+                    t_type: lexer::TokenType::TEXT,
+                    value
+                };
+            }
+        }
+    }
+
     pub fn next(&mut self) -> lexer::Token {
         let token: lexer::Token = lexer::Token{
             t_type: lexer::TokenType::EOF,
@@ -82,177 +180,22 @@ impl Lexer {
             return token
         }
 
-        // Headings parse
-        /*
-        * Need to check if the prev_token is TokenType::EOL or `None`
-        * depending upon the count of hash, return the token type for headings
-        */
+        let char = self.input[self.read_pos];
 
-        // self.read_pos
-        //
-        #[allow(unused_assignments)]
-        let mut char = self.input[self.read_pos];
+        // println!("{}, {:?}", char, self.meta_data.prev_token);
 
-        if Lexer::is_text(&char) || (char == '#' && !Lexer::is_head(&self)){
-            // print!("a");
-            // TODO: handle edge cases of out of index
-            // println!("a {}", char);
-            // did this to say that any more # that come until we reach \n are not heading tags
-            self.meta_data.prev_token = Some(lexer::TokenType::TEXT);
-            self.read_pos += 1;
-            char = self.input[self.read_pos];
-            loop {
-                // FIXME: Looping infinitely in this loop for some reason
-                // println!("a {}", char);
-                // TODO: need to identify header texts
-                /* if !Lexer::is_head(&self, &char) {
-                    if char == '\n' {
-                        println!("{:?}", self.meta_data.prev_token);
-                    }
-                } */
-                if Lexer::is_text(&char) || char == ' ' || (char == '#' && !Lexer::is_head(&self)){
-                    self.read_pos += 1;
-                    char = self.input[self.read_pos];
-                } else {
-                    // TODO: handle edge cases of out of index
-                    let value = self.input[self.pos..self.read_pos] 
-                                   .iter() 
-                                   .collect::<String>();
-                    self.pos = self.read_pos;
-                    self.meta_data.prev_token = Some(lexer::TokenType::TEXT);
-                    return lexer::Token{
-                        t_type: lexer::TokenType::TEXT,
-                        value
-                    };
-                }
-            }
-        } else {
-            if char == '\n'{
-                self.read_pos += 1;
-                let value = self.input[self.pos..self.read_pos].iter().collect::<String>();
-                self.pos = self.read_pos;
-                // println!("{}, {}", len, self.read_pos);
-                self.meta_data.prev_token = Some(lexer::TokenType::EOL);
-                return lexer::Token{
-                    t_type: lexer::TokenType::EOL,
-                    value
-                };
-            } else if char == '#' && 
-                (self.meta_data.prev_token == None || 
-                self.meta_data.prev_token == Some(lexer::TokenType::EOL))
-            {
-                // print!("test");
-                #[allow(unused_variables)]
-                let mut count = 1;
-                loop {
-                    self.read_pos += 1;
-                    char = self.input[self.read_pos];
-                    if char == '#' {
-                        count += 1;
-                    } else {
-                        break;
-                    }
-                }
+        if char == '\n'{
+            return self.new_ln();
+        } 
 
-                let t_type: lexer::TokenType;
-                let value: String;
-
-                // TODO: handle edge cases of out of index
-                self.read_pos += 1;
-                // println!("{}", self.read_pos);
-                value = self.input[self.pos..self.read_pos].iter().collect::<String>();
-                self.pos = self.read_pos;
-                println!("-{}-", self.input[self.read_pos]
-                );
-                
-                match count {
-                    1 => t_type = lexer::TokenType::H1,
-                    2 => t_type = lexer::TokenType::H2,
-                    3 => t_type = lexer::TokenType::H3,
-                    4 => t_type = lexer::TokenType::H4,
-                    5 => t_type = lexer::TokenType::H5,
-                    6 => t_type = lexer::TokenType::H6,
-                    _ => t_type = lexer::TokenType::TEXT
-                }
-
-                self.meta_data.prev_token = Some(lexer::TokenType::H1);
-                return lexer::Token{
-                    t_type,
-                    value,
-                };
-
-                /* if self.meta_data.prev_token == None {
-                } else {
-                } */
-            }
+        if char == '#' && self.is_head() {
+            return self.find_head();
         }
+
+        if Lexer::is_text(&char) || char == ' ' || char == '#' && !self.is_head() {
+            return self.find_text();
+        } 
 
         token
     }
-
-    /* fn nontext(&mut self, len: usize) -> lexer::Token {
-        let t_type;
-        let value;
-        let mut ch: char;
-        if len > self.read_pos {
-            ch = self.input[self.read_pos];
-            if ch == '#' {
-                let mut count = 1;
-                loop {
-                    self.read_pos+=1;
-                    ch = self.input[self.read_pos];
-                    if ch != '#'{
-                        break;
-                    }
-                    count+=1;
-                }
-
-                if count == 6 {
-                    t_type = lexer::TokenType::H6;
-                }
-                else if count == 5 {
-                    t_type = lexer::TokenType::H5;
-                } else if count == 4 {
-                    t_type = lexer::TokenType::H4;
-                } else if count == 3 {
-                    t_type = lexer::TokenType::H3;
-                } else if count == 2 {
-                    t_type = lexer::TokenType::H2;
-                } else {
-                    t_type = lexer::TokenType::H1;
-                }
-                value = self.input[self.pos..self.read_pos]
-                        .to_vec()
-                        .iter()
-                        .collect::<String>();
-                // println!("{}", ch);
-            } else if ch == '*' {
-                t_type = lexer::TokenType::UL;
-                value = self.input[self.pos..self.read_pos+1]
-                        .to_vec()
-                        .iter()
-                        .collect::<String>();
-            } else if ch == '\n' {
-                t_type = lexer::TokenType::EOL;
-                value = self.input[self.pos..self.read_pos+1]
-                        .to_vec()
-                        .iter()
-                        .collect::<String>();
-            }else {
-                t_type = lexer::TokenType::CODE;
-                value = self.input[self.pos..self.read_pos+1]
-                        .to_vec()
-                        .iter()
-                        .collect::<String>();
-            }
-
-
-        } else {
-            t_type = lexer::TokenType::EOF; 
-            value = "END OF FILE".to_string();
-        }
-
-        return lexer::Token { t_type, value }
-    }
- */
 }
