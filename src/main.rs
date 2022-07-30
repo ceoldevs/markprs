@@ -1,6 +1,8 @@
-mod lexer;
-mod reader;
 use std::env;
+
+mod reader;
+mod lexer;
+mod parser;
 
 /*
 * 1. read the file ✔️ 
@@ -22,7 +24,7 @@ fn main() {
     let filename = &args[1];
     let contents = reader::read(filename.to_string());
     let mut lexemes = lexer::Lexer::new_u8(contents);
-    loop {
+    /* loop {
         let token = lexer::Lexer::next(&mut lexemes);
         if token.t_type == lexer::lexer::TokenType::EOF {
             println!("{:?}", token);
@@ -30,7 +32,10 @@ fn main() {
         } else {
             println!("{:?}", token);
         }
-    }
+    } */
+
+    parser::parse_md(&mut lexemes);
+
     /* let token_1 = lexer::Lexer::next(&mut lexemes);
     let token_2 = lexer::Lexer::next(&mut lexemes);
     let token_3 = lexer::Lexer::next(&mut lexemes);
